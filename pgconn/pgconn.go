@@ -3,6 +3,7 @@ package pgconn
 import (
 	"context"
 	"fmt"
+	"strings"
 	"test-udv/pgpass"
 
 	"github.com/jackc/pgx/v5"
@@ -56,11 +57,19 @@ func DatabaseList(ctx context.Context, conn *pgx.Conn) ([]Database, error) {
 	return databases, nil
 }
 
-// Удаляет базу данных
+// Удаляет базу данных.
+// Нельзя удалить базу данных:
+// 1) если есть активное подключение к базе данных;
+// 2) если вы не являетесь владельцем базы данных.
 func DeleteDatabase(ctx context.Context, conn *pgx.Conn, db Database) error {
-	_, err := conn.Exec(ctx, "DROP DATABASE $1", db.Name) // ошибка с доларом
+	dbName := quoteIdentifier(db.Name)
+	_, err := conn.Exec(ctx, "DROP DATABASE "+dbName)
 	if err != nil {
 		return err
 	}
 	return nil
+}
+
+func quoteIdentifier(s string) string {
+	return `"` + strings.Replace(s, `"`, `""`, -1) + `"`
 }

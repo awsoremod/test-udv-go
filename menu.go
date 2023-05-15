@@ -74,7 +74,7 @@ func menu(ctx context.Context, conn *pgx.Conn, entry *pgpass.Entry) (bool, error
 		if _, err := fmt.Scanln(&indexDatabase); err != nil {
 			return false, err
 		}
-		// TODO : ошибка, если введено число больше или меньше размера databases
+		// TODO : panica, если введено число больше или меньше размера databases
 		str := "Вы уверены, что хотите удалить базу данных " + databases[indexDatabase].Name + "?\n" +
 			"1: Да\n" +
 			"2: Нет, отмена\n"
@@ -89,7 +89,7 @@ func menu(ctx context.Context, conn *pgx.Conn, entry *pgpass.Entry) (bool, error
 			if err = pgconn.DeleteDatabase(ctx, conn, databases[indexDatabase]); err != nil {
 				return false, err
 			}
-			fmt.Printf("База данных %s успешно удалилась.\n", databases[indexDatabase].Name)
+			fmt.Printf("База данных %s успешно удалена.\n", databases[indexDatabase].Name)
 
 		default:
 			return false, nil
@@ -109,7 +109,7 @@ func menu(ctx context.Context, conn *pgx.Conn, entry *pgpass.Entry) (bool, error
 		if _, err := fmt.Scanln(&indexBackup); err != nil {
 			return false, err
 		}
-		// TODO : ошибка, если введено число больше или меньше размера backups
+		// TODO : panica, если введено число больше или меньше размера backups
 		str := "Вы уверены, что хотите удалить бэкап " + backups[indexBackup].Name() + " :\n" +
 			"1: Да\n" +
 			"2: Нет, отмена\n"
@@ -145,7 +145,7 @@ func menu(ctx context.Context, conn *pgx.Conn, entry *pgpass.Entry) (bool, error
 		if _, err := fmt.Scanln(&indexDatabase); err != nil {
 			return false, err
 		}
-		// TODO : ошибка если введено число больше или меньше размера databases
+		// TODO : panica, если введено число больше или меньше размера databases
 		if err := backup.CreateBackup(entry, databases[indexDatabase]); err != nil {
 			return false, err
 		}
@@ -165,7 +165,7 @@ func menu(ctx context.Context, conn *pgx.Conn, entry *pgpass.Entry) (bool, error
 		if _, err := fmt.Scanln(&indexBackup); err != nil {
 			return false, err
 		}
-		// TODO : ошибка если введено число больше или меньше размера backups
+		// TODO : panica, если введено число больше или меньше размера backups
 		if err := backup.BackupRestore(entry, backups[indexBackup]); err != nil {
 			return false, err
 		}

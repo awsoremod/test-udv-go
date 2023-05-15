@@ -155,8 +155,8 @@ func IsExistEntry(path string, entry *Entry) (bool, error) {
 		return false, err
 	}
 
-	// TODO : Вынести в функцию
 	for _, e := range entries {
+		// TODO : Вынести в функцию
 		if (e.Host == entry.Host) &&
 			(e.Port == entry.Port) &&
 			(e.Dbname == entry.Dbname) &&

@@ -45,7 +45,8 @@ func DeleteBackup(backupFile fs.DirEntry) error {
 }
 
 // Создает бэкап базы данных с помощью утилиты pg_dump. Файлы бэкапов
-// помещаются в папку backups
+// помещаются в папку backups. В бэкап заносится информация о владельце
+// базы данных.
 func CreateBackup(entry *pgpass.Entry, database pgconn.Database) error {
 
 	ex, err := os.Executable()
@@ -62,7 +63,7 @@ func CreateBackup(entry *pgpass.Entry, database pgconn.Database) error {
 	hour := t.Hour()
 	minute := t.Minute()
 
-	str := fmt.Sprintf("_%d-%d-%d_%d-%d", year, month, day, hour, minute)
+	strTime := fmt.Sprintf("_%d-%d-%d_%d-%d", year, month, day, hour, minute)
 	queries := []string{
 		`/C`,
 		`pg_dump.exe`,
@@ -70,7 +71,7 @@ func CreateBackup(entry *pgpass.Entry, database pgconn.Database) error {
 		`-p` + entry.Port,
 		`-U` + entry.User,
 		`--no-password`,
-		`-f` + exPath + `/backups/` + database.Name + str + `.dump`,
+		`-f` + exPath + `/backups/` + database.Name + strTime + `.dump`,
 		`-F` + `c`,
 		`-d` + database.Name,
 	}
@@ -84,7 +85,11 @@ func CreateBackup(entry *pgpass.Entry, database pgconn.Database) error {
 	return nil
 }
 
-// Восстанавливает базу данных из бэкапа с помощью утилиты pg_restore
+// Восстанавливает базу данных из бэкапа с помощью утилиты pg_restore.
+// Нельзя восстановить базу данных:
+// 1) если в её дампе не вы владелец базы данных;
+// 2) которая есть на сервере postgres;
+// 3) если у вас нет прав на создание базы данных.
 func BackupRestore(entry *pgpass.Entry, backupFile fs.DirEntry) error {
 	ex, err := os.Executable()
 	if err != nil {
@@ -101,7 +106,7 @@ func BackupRestore(entry *pgpass.Entry, backupFile fs.DirEntry) error {
 		`-U` + entry.User,
 		`--no-password`,
 		`-F` + `c`,
-		`-C`, // TODO проверить с базами
+		`-C`,
 		//`-c`,
 		//`--if-exists`,
 		//`-f` + `-`,

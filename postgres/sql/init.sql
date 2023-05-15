@@ -10,6 +10,7 @@
 
 
 CREATE USER username_1 WITH PASSWORD 'password_1';
+ALTER USER username_1 CREATEDB;
 
 CREATE DATABASE first_for_username_1;
 GRANT ALL PRIVILEGES ON DATABASE first_for_username_1 TO username_1;
@@ -25,6 +26,7 @@ ALTER DATABASE third_for_username_1 OWNER TO username_1;
 
 
 CREATE USER username_2 WITH PASSWORD 'password_2';
+ALTER USER username_2 CREATEDB;
 
 CREATE DATABASE first_for_username_2;
 GRANT ALL PRIVILEGES ON DATABASE first_for_username_2 TO username_2;
@@ -38,8 +40,13 @@ CREATE DATABASE third_for_username_2;
 GRANT ALL PRIVILEGES ON DATABASE third_for_username_2 TO username_2;
 ALTER DATABASE third_for_username_2 OWNER TO username_2;
 
-CREATE DATABASE test1;
-CREATE DATABASE test2;
+
+
+
+
+
+
+
 
 create table users (                                                                      
   id bigint primary key,                                                                           
