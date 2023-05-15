@@ -12,10 +12,8 @@ import (
 	"time"
 )
 
+// Возвращает список файлов, которые находятся в папке backups
 func BackupList() ([]fs.DirEntry, error) {
-	// TODO сделать возврат только файлов .dump, .tar
-	// Переделать на получение открытого файла
-
 	dir, err := os.Open("./backups")
 	if err != nil {
 		return nil, err
@@ -30,6 +28,7 @@ func BackupList() ([]fs.DirEntry, error) {
 	return files, nil
 }
 
+// Удаляет файл бэкапа в папке backups
 func DeleteBackup(backupFile fs.DirEntry) error {
 	ex, err := os.Executable()
 	if err != nil {
@@ -45,11 +44,9 @@ func DeleteBackup(backupFile fs.DirEntry) error {
 	return nil
 }
 
+// Создает бэкап базы данных с помощью утилиты pg_dump. Файлы бэкапов
+// помещаются в папку backups
 func CreateBackup(entry *pgpass.Entry, database pgconn.Database) error {
-	// TODO добавить 0 перед месяцем если меньше 10
-	// Проверить использование форматов времени
-	// Проверить на ошибку если в имени базы данных есть пробел
-	// Возможно имена папок вынести в константы
 
 	ex, err := os.Executable()
 	if err != nil {
@@ -87,6 +84,7 @@ func CreateBackup(entry *pgpass.Entry, database pgconn.Database) error {
 	return nil
 }
 
+// Восстанавливает базу данных из бэкапа с помощью утилиты pg_restore
 func BackupRestore(entry *pgpass.Entry, backupFile fs.DirEntry) error {
 	ex, err := os.Executable()
 	if err != nil {
@@ -115,7 +113,7 @@ func BackupRestore(entry *pgpass.Entry, backupFile fs.DirEntry) error {
 	cmd.Dir = exPath + "/pg_dump_restore_15_2"
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return errors.New(fmt.Sprint(err) + ": " + string(output[:300]))
+		return errors.New(fmt.Sprint(err) + ": " + string(output[:500]))
 	}
 	return nil
 }

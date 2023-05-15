@@ -9,10 +9,12 @@ import (
 	"strings"
 	"test-udv/pgconn"
 	"test-udv/pgpass"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func main() {
-	// TODO Добавить --help
+	// TODO : Добавить --help
 	// Вынести что-нибудь в параметры утилиты
 	// Предложить пользователю выбрать строку подключения из строк подключения в файле конфигурации pgpass.conf
 
@@ -33,7 +35,7 @@ func main() {
 	}
 	defer pgpassFile.Close()
 
-	pathToPgpass := pgpassFile.Name() // добавить const
+	pathToPgpass := pgpassFile.Name()
 
 	entry, err := configureEntry(pathToPgpass)
 	if err != nil {
@@ -62,28 +64,12 @@ func main() {
 	}
 	defer backOrigin(pathToPgpass)
 
-	// Setup our Ctrl+C handler
 	setupCloseHandler(pathToPgpass)
 
-	var isExit bool
-	for {
-		fmt.Println()
-		err := menuCycle(&isExit, conn, entry) // добавить контекст
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-		}
-		if isExit {
-			break
-		}
-
-		fmt.Print(`Нажмите ENTER`)
-		var input int
-		if _, err := fmt.Scanln(&input); err != nil {
-			fmt.Fprintf(os.Stderr, "%v\n", err)
-		}
-	}
+	menuLoop(ctx, conn, entry)
 }
 
+// Возвращает открытый или созданный файл pgpass.conf
 func pgpassCreateOrOpen() (*os.File, error) {
 	path, err := pgpass.GetPath()
 	if err != nil {
@@ -98,6 +84,7 @@ func pgpassCreateOrOpen() (*os.File, error) {
 	return file, nil
 }
 
+// Конфигурирует строку подключения
 func configureEntry(path string) (*pgpass.Entry, error) {
 	entries, err := pgpass.GetEntries(path)
 	if err != nil {
@@ -116,6 +103,9 @@ func configureEntry(path string) (*pgpass.Entry, error) {
 	return entry, nil
 }
 
+// Если в файле конфигурации есть строки подключения, возвращает
+// последнюю строку подключения. Если нет, формирует строку
+// по умолчанию
 func buildDefaultEntry(entries []*pgpass.Entry) (*pgpass.Entry, error) {
 	if len(entries) == 0 {
 		entry := &pgpass.Entry{
@@ -134,6 +124,7 @@ func buildDefaultEntry(entries []*pgpass.Entry) (*pgpass.Entry, error) {
 	return entry, nil
 }
 
+// Ввод параметров подключения
 func enterСonfigParameters(entry *pgpass.Entry) error {
 	// TODO убрать отображение вводимого и предлагаемого пароля
 
@@ -155,9 +146,11 @@ func enterСonfigParameters(entry *pgpass.Entry) error {
 	return nil
 }
 
+// Ввод параметра подключения
 func enterСonfigParameter(str string, variable *string) error {
-	// TODO Eсли пустота уже есть в конфиге то нельзя нажать enter
-	// Добавить проверки входных параметров
+	// TODO : Добавить условие, если в параметре ничего нет,
+	// нельзя нажать enter.
+	// Добавить проверки входных параметров.
 
 	fmt.Printf("Укажите %s (%s): ", str, *variable)
 	var input string
@@ -177,8 +170,10 @@ func enterСonfigParameter(str string, variable *string) error {
 	return nil
 }
 
+// Если данное подключение существует в файле конфигурации
+// то функция ничего не предлагает
 func offerToSaveEntry(pgpassFile *os.File, entry *pgpass.Entry) error {
-	isExistConfig, err := pgpass.IsExistEntry(pgpassFile.Name(), entry) // переделать
+	isExistConfig, err := pgpass.IsExistEntry(pgpassFile.Name(), entry)
 	if err != nil {
 		return err
 	}
@@ -193,7 +188,7 @@ func offerToSaveEntry(pgpassFile *os.File, entry *pgpass.Entry) error {
 			return err
 		}
 		if selectedNumber == 1 {
-			if err := pgpass.AddConfigInFile(pgpassFile, entry); err != nil {
+			if err := pgpass.AddEntryInFile(pgpassFile, entry); err != nil {
 				return err
 			}
 		}
@@ -201,6 +196,8 @@ func offerToSaveEntry(pgpassFile *os.File, entry *pgpass.Entry) error {
 	return nil
 }
 
+// Создает новый временный файл pgpass.conf. Старый файл переименуется
+// в pgpass.conf_origin
 func createTmpPgpassFile(path string, entry *pgpass.Entry) error {
 	if err := os.Rename(path, path+`_origin`); err != nil {
 		return err
@@ -209,16 +206,18 @@ func createTmpPgpassFile(path string, entry *pgpass.Entry) error {
 	tmpPgpassFile, err := pgpass.CreateOrOpenFile(path)
 	if err != nil {
 		if err := os.Rename(path+`_origin`, path); err != nil {
-			str := fmt.Sprintf("Не получилось обратно переименовать оригинальный файл, переименуйте файл pgpass.conf_origin в pgpass.conf. error: %v\n", err)
-			return errors.New(str) // добавить информацию о верхней ошибке
+			str := fmt.Sprintf("Не получилось обратно переименовать оригинальный файл,"+
+				"переименуйте файл pgpass.conf_origin в pgpass.conf. error: %v\n", err)
+			return errors.New(str) // TODO : добавить информацию о верхней ошибке
 		}
 		return err
 	}
 	defer tmpPgpassFile.Close()
 
-	if err := pgpass.AddConfigInFile(tmpPgpassFile, &pgpass.Entry{Host: "*", Port: "*", Dbname: "*", User: "*", Password: entry.Password}); err != nil {
+	superEntry := &pgpass.Entry{Host: "*", Port: "*", Dbname: "*", User: "*", Password: entry.Password}
+	if err := pgpass.AddEntryInFile(tmpPgpassFile, superEntry); err != nil {
 		if err := deleteTmpFile(path); err != nil {
-			return err // добавить информацию о верхней ошибке
+			return err // TODO : добавить информацию о верхней ошибке
 		}
 		str := fmt.Sprintf("Не удалось записать во временный файл конфигурации. %v\n", err)
 		return errors.New(str)
@@ -226,6 +225,7 @@ func createTmpPgpassFile(path string, entry *pgpass.Entry) error {
 	return nil
 }
 
+// Setup our Ctrl+C handler
 func setupCloseHandler(pathPgpass string) {
 	// TODO : Добавить корректное закрытие конекта к базе
 
@@ -243,14 +243,16 @@ func setupCloseHandler(pathPgpass string) {
 	}()
 }
 
+// Удаляет временный файл и переименовывает pgpass.conf_origin в pgpass.conf.
+// Выводит сообщения об ошибках в os.Stderr
 func backOrigin(pathPgpass string) {
 	if err := deleteTmpFile(pathPgpass); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 	}
 }
 
+// Удаляет временный файл и переименовывает pgpass.conf_origin в pgpass.conf.
 func deleteTmpFile(pathPgpass string) error {
-
 	if err := os.Remove(pathPgpass); err != nil {
 		return err
 	}
@@ -261,4 +263,24 @@ func deleteTmpFile(pathPgpass string) error {
 	}
 
 	return nil
+}
+
+// Цикл отображения меню
+func menuLoop(ctx context.Context, conn *pgx.Conn, entry *pgpass.Entry) {
+	for {
+		fmt.Println()
+
+		isExit, err := menu(ctx, conn, entry)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%v\n", err)
+		}
+
+		if isExit {
+			break
+		}
+
+		fmt.Print(`Нажмите ENTER`)
+		var input int
+		fmt.Scanln(&input)
+	}
 }

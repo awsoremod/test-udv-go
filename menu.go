@@ -21,8 +21,8 @@ const (
 	exit            = 7
 )
 
-func menuCycle(isExit *bool, conn *pgx.Conn, entry *pgpass.Entry) error {
-	ctx := context.Background()
+// Первый выходной параметр отвечает за выход из меню
+func menu(ctx context.Context, conn *pgx.Conn, entry *pgpass.Entry) (bool, error) {
 	str := "Меню\n" +
 		"1: Список баз данных\n" +
 		"2: Список бэкапов\n" +
@@ -35,34 +35,34 @@ func menuCycle(isExit *bool, conn *pgx.Conn, entry *pgpass.Entry) error {
 	fmt.Print("Choose a option: ")
 	var inputOption int
 	if _, err := fmt.Scanln(&inputOption); err != nil {
-		return err
+		return false, err
 	}
 
 	switch inputOption {
 	case databaseList:
 		databases, err := pgconn.DatabaseList(ctx, conn)
 		if err != nil {
-			return err
+			return false, err
 		}
 		fmt.Println(`Вот список всех баз данных:`)
 		for _, d := range databases {
-			fmt.Printf("%s\n", d.Name) // вынести в функцию
+			fmt.Printf("%s\n", d.Name) // TODO : вынести в функцию
 		}
 
 	case backupList:
 		files, err := backup.BackupList()
 		if err != nil {
-			return err
+			return false, err
 		}
 		fmt.Println(`Вот список всех бэкапов:`)
 		for _, file := range files {
-			fmt.Println(file.Name()) // вынести в функцию
+			fmt.Println(file.Name()) // TODO : вынести в функцию
 		}
 
 	case deleteDatabase:
 		databases, err := pgconn.DatabaseList(ctx, conn)
 		if err != nil {
-			return err
+			return false, err
 		}
 		fmt.Println(`Вот список всех баз данных:`)
 		for i, d := range databases {
@@ -72,9 +72,9 @@ func menuCycle(isExit *bool, conn *pgx.Conn, entry *pgpass.Entry) error {
 		fmt.Print(`Выбирите базу данных для удаления: `)
 		var indexDatabase int
 		if _, err := fmt.Scanln(&indexDatabase); err != nil {
-			return err
+			return false, err
 		}
-		// ошибка если введено число больше размера databases
+		// TODO : ошибка, если введено число больше или меньше размера databases
 		str := "Вы уверены, что хотите удалить базу данных " + databases[indexDatabase].Name + "?\n" +
 			"1: Да\n" +
 			"2: Нет, отмена\n"
@@ -82,23 +82,23 @@ func menuCycle(isExit *bool, conn *pgx.Conn, entry *pgpass.Entry) error {
 		fmt.Print(`Введите ваш ответ: `)
 		var selectedNumber int
 		if _, err := fmt.Scanln(&selectedNumber); err != nil {
-			return err
+			return false, err
 		}
 		switch selectedNumber {
 		case 1:
 			if err = pgconn.DeleteDatabase(ctx, conn, databases[indexDatabase]); err != nil {
-				return err
+				return false, err
 			}
 			fmt.Printf("База данных %s успешно удалилась.\n", databases[indexDatabase].Name)
 
 		default:
-			return nil
+			return false, nil
 		}
 
 	case deleteBackup:
 		backups, err := backup.BackupList()
 		if err != nil {
-			return err
+			return false, err
 		}
 		fmt.Println(`Вот список всех бэкапов:`)
 		for i, file := range backups {
@@ -107,9 +107,9 @@ func menuCycle(isExit *bool, conn *pgx.Conn, entry *pgpass.Entry) error {
 		fmt.Print(`Выбирите бэкап для удаления: `)
 		var indexBackup int
 		if _, err := fmt.Scanln(&indexBackup); err != nil {
-			return err
+			return false, err
 		}
-		// ошибка если введено число больше размера backups
+		// TODO : ошибка, если введено число больше или меньше размера backups
 		str := "Вы уверены, что хотите удалить бэкап " + backups[indexBackup].Name() + " :\n" +
 			"1: Да\n" +
 			"2: Нет, отмена\n"
@@ -117,23 +117,23 @@ func menuCycle(isExit *bool, conn *pgx.Conn, entry *pgpass.Entry) error {
 		fmt.Print(`Введите ваш ответ: `)
 		var selectedNumber int
 		if _, err := fmt.Scanln(&selectedNumber); err != nil {
-			return err
+			return false, err
 		}
 		switch selectedNumber {
 		case 1:
 			if err = backup.DeleteBackup(backups[indexBackup]); err != nil {
-				return err
+				return false, err
 			}
 			fmt.Printf("Бэкап %s успешно удалён.\n", backups[indexBackup].Name())
 
 		default:
-			return nil
+			return false, nil
 		}
 
 	case createBackup:
 		databases, err := pgconn.DatabaseList(ctx, conn)
 		if err != nil {
-			return err
+			return false, err
 		}
 		fmt.Println(`Вот список всех баз данных:`)
 		for i, d := range databases {
@@ -143,18 +143,18 @@ func menuCycle(isExit *bool, conn *pgx.Conn, entry *pgpass.Entry) error {
 		fmt.Print(`Выбирите базу данных для создания бэкапа: `)
 		var indexDatabase int
 		if _, err := fmt.Scanln(&indexDatabase); err != nil {
-			return err
+			return false, err
 		}
-		// ошибка если введено число больше размера databases
+		// TODO : ошибка если введено число больше или меньше размера databases
 		if err := backup.CreateBackup(entry, databases[indexDatabase]); err != nil {
-			return err
+			return false, err
 		}
 		fmt.Println("Успешно создан бэкап базы данных " + databases[indexDatabase].Name)
 
 	case restoreDatabase:
 		backups, err := backup.BackupList()
 		if err != nil {
-			return err
+			return false, err
 		}
 		fmt.Println(`Вот список всех бэкапов:`)
 		for i, file := range backups {
@@ -163,20 +163,19 @@ func menuCycle(isExit *bool, conn *pgx.Conn, entry *pgpass.Entry) error {
 		fmt.Print(`Выбирите бэкап для востановления бд: `)
 		var indexBackup int
 		if _, err := fmt.Scanln(&indexBackup); err != nil {
-			return err
+			return false, err
 		}
-		// ошибка если введено число больше размера backups
+		// TODO : ошибка если введено число больше или меньше размера backups
 		if err := backup.BackupRestore(entry, backups[indexBackup]); err != nil {
-			return err
+			return false, err
 		}
 		fmt.Println("Успешно восстановлена база данных из файла " + backups[indexBackup].Name())
 
 	case exit:
-		*isExit = true
-		return nil
+		return true, nil
 	default:
-		return errors.New(`ошибка ввода`)
+		return false, errors.New(`ошибка ввода`)
 	}
 
-	return nil
+	return false, nil
 }

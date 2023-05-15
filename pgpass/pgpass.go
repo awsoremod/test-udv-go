@@ -59,16 +59,8 @@ func parseLine(line string) (*Entry, error) {
 	}, nil
 }
 
-type Pgpass struct {
-	// TODO метод open добавить
-	// Добавить просмотр env postgres параметров
-
-	Path    string
-	Entries []*Entry
-}
-
 func GetPath() (string, error) {
-	// TODO : Добавить, изменить возврат в зависимости от операционной системы
+	// TODO : Добавить возврат в зависимости от операционной системы
 
 	pathPgpass, ok := os.LookupEnv(`APPDATA`)
 	if !ok {
@@ -79,8 +71,9 @@ func GetPath() (string, error) {
 	return pathPgpass, nil
 }
 
-// ReadPassfile reads the file at path and parses it into a Passfile.
+// Читает файл по пути и парсит его в массив подключений
 func GetEntries(path string) ([]*Entry, error) {
+
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -94,28 +87,28 @@ func GetEntries(path string) ([]*Entry, error) {
 	return entries, nil
 }
 
-// ParsePassfile reads r and parses it into a Passfile.
+// Парсит файл в массив подключений
 func parsePassfile(r io.Reader) ([]*Entry, error) {
 	// Если функция вызывается повторно на том же файле,
-	// то сканирование будет происходить с прошлого места. TODO перепроверить
+	// то сканирование будет происходить с прошлого места.
 
-	entryes := make([]*Entry, 0, 10)
+	entries := make([]*Entry, 0, 10)
 
 	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		entry, err := parseLine(scanner.Text())
 		if err == nil {
-			entryes = append(entryes, entry)
+			entries = append(entries, entry)
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, err
 	}
 
-	return entryes, nil
+	return entries, nil
 }
 
-// Проверяет существования файла Pgpass
+// Проверяет существование файла Pgpass
 func IsExistFile(path string) (bool, error) {
 	_, err := os.Stat(path)
 	if err == nil {
@@ -152,17 +145,17 @@ func CreateOrOpenFile(path string) (*os.File, error) {
 	return file, nil
 }
 
+// Проверяет, есть ли строка подключения в виде *Entry
+// в файле
 func IsExistEntry(path string, entry *Entry) (bool, error) {
-	// TODO
-	// Проверять config на nil
-	// Проверить p.Entries на nil
-	// Перегрузить оператор сравнения двух структур, загуглить
+	// TODO : Проверять entry на nil
 
 	entries, err := GetEntries(path)
 	if err != nil {
 		return false, err
 	}
 
+	// TODO : Вынести в функцию
 	for _, e := range entries {
 		if (e.Host == entry.Host) &&
 			(e.Port == entry.Port) &&
@@ -175,15 +168,16 @@ func IsExistEntry(path string, entry *Entry) (bool, error) {
 	return false, nil
 }
 
-// Добавляет строку соединения в конфиг
-func AddConfigInFile(file *os.File, config *Entry) error {
-	// Проверять config на nil
-	// Возможно изменить file на какой-нибудь интерфейс
-	// Проверить как работает WriteString
+// Добавляет строку соединения в виде *Entry
+// в файл конфигурации
+func AddEntryInFile(file *os.File, config *Entry) error {
+	// TODO : Проверять на nil
 
 	configString := config.string()
 
-	if _, err := file.WriteString("\n" + configString + "\n"); err != nil { // переделать под нормальную строку
+	str := fmt.Sprintf("\n%s\n", configString)
+
+	if _, err := file.WriteString(str); err != nil {
 		return err
 	}
 
