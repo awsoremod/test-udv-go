@@ -3,7 +3,7 @@ package pgconn
 import (
 	"context"
 	"fmt"
-	"test-udv/pgpassfile"
+	"test-udv/pgpass"
 
 	"github.com/jackc/pgx/v5"
 )
@@ -12,7 +12,7 @@ type Database struct {
 	Name string `db:"datname"`
 }
 
-func OpenConnect(ctx context.Context, config *pgpassfile.Entry) (*pgx.Conn, error) {
+func OpenConnect(ctx context.Context, config *pgpass.Entry) (*pgx.Conn, error) {
 	// TODO уменьшить время ожидания подключения
 	// Или количество попыток подключения
 

@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"test-udv/pgconn"
-	"test-udv/pgpassfile"
+	"test-udv/pgpass"
 	"time"
 )
 
@@ -45,7 +45,7 @@ func DeleteBackup(backupFile fs.DirEntry) error {
 	return nil
 }
 
-func CreateBackup(entry *pgpassfile.Entry, database pgconn.Database) error {
+func CreateBackup(entry *pgpass.Entry, database pgconn.Database) error {
 	// TODO добавить 0 перед месяцем если меньше 10
 	// Проверить использование форматов времени
 	// Проверить на ошибку если в имени базы данных есть пробел
@@ -87,7 +87,7 @@ func CreateBackup(entry *pgpassfile.Entry, database pgconn.Database) error {
 	return nil
 }
 
-func BackupRestore(entry *pgpassfile.Entry, backupFile fs.DirEntry) error {
+func BackupRestore(entry *pgpass.Entry, backupFile fs.DirEntry) error {
 	ex, err := os.Executable()
 	if err != nil {
 		return err

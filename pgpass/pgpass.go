@@ -1,4 +1,4 @@
-package pgpassfile
+package pgpass
 
 import (
 	"bufio"
@@ -67,20 +67,7 @@ type Pgpass struct {
 	Entries []*Entry
 }
 
-func NewPgpass() (*Pgpass, error) {
-	path, err := getPath()
-	if err != nil {
-		return nil, err
-	}
-
-	entryes, err := readPassfile(path)
-	if err != nil {
-		return nil, err
-	}
-	return &Pgpass{path, entryes}, nil
-}
-
-func getPath() (string, error) {
+func GetPath() (string, error) {
 	// TODO : Добавить, изменить возврат в зависимости от операционной системы
 
 	pathPgpass, ok := os.LookupEnv(`APPDATA`)
@@ -93,18 +80,18 @@ func getPath() (string, error) {
 }
 
 // ReadPassfile reads the file at path and parses it into a Passfile.
-func readPassfile(path string) ([]*Entry, error) {
+func GetEntries(path string) ([]*Entry, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
 
-	entryes, err := parsePassfile(f)
+	entries, err := parsePassfile(f)
 	if err != nil {
 		return nil, err
 	}
-	return entryes, nil
+	return entries, nil
 }
 
 // ParsePassfile reads r and parses it into a Passfile.
@@ -129,8 +116,8 @@ func parsePassfile(r io.Reader) ([]*Entry, error) {
 }
 
 // Проверяет существования файла Pgpass
-func (p *Pgpass) IsExistFile() (bool, error) {
-	_, err := os.Stat(p.Path)
+func IsExistFile(path string) (bool, error) {
+	_, err := os.Stat(path)
 	if err == nil {
 		return true, nil
 	}
@@ -141,37 +128,42 @@ func (p *Pgpass) IsExistFile() (bool, error) {
 }
 
 // Если файл существут, то функция откроет файл
-func (p *Pgpass) CreateOrOpenFile() (*os.File, error) {
-	isExist, err := p.IsExistFile()
+func CreateOrOpenFile(path string) (*os.File, error) {
+	isExist, err := IsExistFile(path)
 	if err != nil {
 		return nil, err
 	}
 	if isExist {
-		file, err := os.OpenFile(p.Path, os.O_RDWR|os.O_APPEND|os.O_WRONLY, 0600)
+		file, err := os.OpenFile(path, os.O_APPEND|os.O_RDWR, 0600)
 		if err != nil {
 			return nil, err
 		}
 		return file, nil
 	}
 
-	if err := os.MkdirAll(filepath.Dir(p.Path), 0600); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0600); err != nil {
 		return nil, err
 	}
 
-	file, err := os.OpenFile(p.Path, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return nil, err
 	}
 	return file, nil
 }
 
-func (p *Pgpass) IsExistEntry(entry *Entry) (bool, error) {
+func IsExistEntry(path string, entry *Entry) (bool, error) {
 	// TODO
 	// Проверять config на nil
 	// Проверить p.Entries на nil
 	// Перегрузить оператор сравнения двух структур, загуглить
 
-	for _, e := range p.Entries {
+	entries, err := GetEntries(path)
+	if err != nil {
+		return false, err
+	}
+
+	for _, e := range entries {
 		if (e.Host == entry.Host) &&
 			(e.Port == entry.Port) &&
 			(e.Dbname == entry.Dbname) &&
@@ -184,15 +176,14 @@ func (p *Pgpass) IsExistEntry(entry *Entry) (bool, error) {
 }
 
 // Добавляет строку соединения в конфиг
-func (p *Pgpass) AddConfigInFile(file *os.File, config *Entry) error {
+func AddConfigInFile(file *os.File, config *Entry) error {
 	// Проверять config на nil
 	// Возможно изменить file на какой-нибудь интерфейс
 	// Проверить как работает WriteString
-	p.Entries = append(p.Entries, config)
 
 	configString := config.string()
 
-	if _, err := file.WriteString(configString); err != nil {
+	if _, err := file.WriteString("\n" + configString + "\n"); err != nil { // переделать под нормальную строку
 		return err
 	}
 

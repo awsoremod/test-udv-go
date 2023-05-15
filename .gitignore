@@ -1,0 +1,4 @@
+.vscode
+backups
+main.exe
+pg_dump_restore_15_2

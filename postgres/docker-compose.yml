@@ -1,0 +1,14 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:15.2
+    restart: always
+    environment:
+      POSTGRES_DB: 'habrdb'
+      POSTGRES_USER: 'habrpguser'
+      POSTGRES_PASSWORD: 'pgpwd4habr'
+      PGDATA: '/var/lib/postgresql/data/pgdata'
+    volumes:
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - '6432:5432'
